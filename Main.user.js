@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.4
+// @version      2.5
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -21,6 +21,7 @@
     'use strict';
 
     let lastNewsLinks = [];
+    let activeNotifications = [];
 
     lastNewsLinks = JSON.parse(localStorage.getItem('lastNewsLinks')) || lastNewsLinks || [];
     function saveLastNewsLinks() {
@@ -128,33 +129,33 @@
     // Функция для создания уведомления
     function createNotification(newsData) {
         const { link, title, text } = newsData;
-        const hashtags = '\n\n#КААЛИЦИЯ #дым #potatopopular #potatosk #cakepopular #считаемманулов #тортодым #бобр #NewsOfficial\nЛюбимая #КААЛИЦИЯ: 🥴@kamra 👾@zzzuuuk 📰@newsoffc 🦦@BABRIK 🖕@Feihuya77 🕶@Artemius  🤯@dmitrii_gr 🤠@l1kaa11 🥴@skorlange';
+        const hashtags = '\n\n#kod #itdkod\n#КААЛИЦИЯ #дым #potatopopular #potatosk #cakepopular #считаемманулов #тортодым #бобр #NewsOfficial\nЛюбимая #КААЛИЦИЯ: 🥴@kamra 👾@zzzuuuk 📰@newsoffc 🦦@BABRIK 🖕@Feihuya77 🕶@Artemius  🤯@dmitrii_gr 🤠@l1kaa11 🥴@skorlange';
         const fullText = title + '\n\n' + text + hashtags;
 
         // Создаем контейнер уведомления
         const notification = document.createElement('div');
         notification.id = 'tass-notification';
         notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 5%;
-        width: 90%;
-        max-width: 800px;
-        background: linear-gradient(135deg, #ff4d4d, #cc0000); /* Современный градиент */
-        color: white;
-        padding: 20px;
-        box-sizing: border-box;
-        z-index: 10000;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 14px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-radius: 15px; /* Более закругленные края */
-        transform: translateY(-120%); /* Начальная позиция для анимации */
-        transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Плавная анимация */
-        backdrop-filter: blur(10px); /* Современный эффект размытия */
+            position: fixed;
+            left: 5%;
+            width: 90%;
+            max-width: 800px;
+            background: linear-gradient(135deg, #ff4d4d, #cc0000); /* Современный градиент */
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 10000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 15px; /* Более закругленные края */
+            transform: translateY(-120%); /* Начальная позиция для анимации */
+            transition: top 0.6s ease, transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.6s ease; /* Плавная анимация для top, transform и opacity */
+            backdrop-filter: blur(10px); /* Современный эффект размытия */
+            opacity: 1;
     `;
 
         // Контейнер для текста
@@ -204,17 +205,17 @@
         const sendButton = document.createElement('button');
         sendButton.textContent = 'ОТПРАВИТЬ НОВОСТЬ';
         sendButton.style.cssText = `
-        background-color: rgba(255,255,255,0.2);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.3);
-        padding: 10px 15px;
-        cursor: pointer;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 500;
-        transition: background-color 0.3s ease;
-        text-align: center; /* Центрирование текста */
-        min-width: 120px; /* Фиксированная минимальная ширина для сохранения размера */
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+            text-align: center; /* Центрирование текста */
+            min-width: 120px; /* Фиксированная минимальная ширина для сохранения размера */
     `;
         sendButton.onmouseover = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
         sendButton.onmouseout = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
@@ -256,22 +257,36 @@
             }
         };
 
+        // Функция для удаления уведомления с анимацией
+        function removeNotification() {
+            notification.style.transform = 'translateY(-120%)';
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                const index = activeNotifications.indexOf(notification);
+                if (index > -1) {
+                    activeNotifications.splice(index, 1);
+                }
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+                updateNotificationPositions();
+            }, 600); // Время анимации
+        }
+
         // Крестик для закрытия
         const closeButton = document.createElement('span');
         closeButton.textContent = '✕';
         closeButton.title = 'Закрыть'; // Подсказка для доступности
         closeButton.style.cssText = `
-        font-size: 20px;
-        cursor: pointer;
-        color: white;
-        margin-left: 10px;
-        transition: color 0.3s ease;
+            font-size: 20px;
+            cursor: pointer;
+            color: white;
+            margin-left: 10px;
+            transition: color 0.3s ease;
     `;
         closeButton.onmouseover = () => closeButton.style.color = '#ffe6e6';
         closeButton.onmouseout = () => closeButton.style.color = 'white';
-        closeButton.onclick = function() {
-            notification.remove();
-        };
+        closeButton.onclick = removeNotification;
 
         // Собираем элементы
         buttonsContainer.appendChild(copyButton);
@@ -283,17 +298,32 @@
         // Добавляем в body
         document.body.appendChild(notification);
 
-        // Анимация всплывания
+        // Добавляем в начало массива активных уведомлений (новые сверху)
+        activeNotifications.unshift(notification);
+
+        // Обновляем позиции всех уведомлений
+        updateNotificationPositions();
+
+        // Анимация появления: дернуться, а потом выскочить
         setTimeout(() => {
-            notification.style.transform = 'translateY(0)';
-        }, 10); // Небольшая задержка для применения transition
+            notification.style.transform = 'translateY(-100%)'; // Дернуться
+        }, 10);
+        setTimeout(() => {
+            notification.style.transform = 'translateY(0)'; // Выскочить
+        }, 150);
+
 
         // Таймер на 20 секунд для автоматического закрытия
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 20000);
+        setTimeout(removeNotification, 20000);
+    }
+
+    // Функция для обновления позиций уведомлений
+    function updateNotificationPositions() {
+        activeNotifications.forEach((notification, index) => {
+            const topPosition = 20 + index * 100; // Увеличенное расстояние между уведомлениями
+            notification.style.top = `${topPosition}px`;
+            notification.style.transform = 'translateY(0)';
+        });
     }
 
     // Функция для создания статичной кнопки
@@ -334,6 +364,10 @@
             try {
                 const newsData = await checkForNewNews();
                 if (newsData) {
+                    if (!lastNewsLinks.includes(newsData.link)){
+                        lastNewsLinks.push(newsData.link);
+                        saveLastNewsLinks();
+                    }
                     createNotification(newsData);
                     // Успех: временно меняем иконку
                     button.innerHTML = '✓';
