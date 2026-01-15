@@ -3,8 +3,8 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.3
-// @description  Мониторит tass.ru/feed и показывает уведомление при новых новостях
+// @version      2.4
+// @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
 // @exclude      https://*.xn--d1ah4a.com/login
@@ -161,8 +161,7 @@
         const textContainer = document.createElement('div');
         textContainer.style.flex = '1';
         textContainer.style.marginRight = '20px';
-        textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВАЯ НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
-
+        textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
         // Кнопки
         const buttonsContainer = document.createElement('div');
         buttonsContainer.style.display = 'flex';
@@ -297,6 +296,72 @@
         }, 20000);
     }
 
+    // Функция для создания статичной кнопки
+    function createManualButton() {
+        const button = document.createElement('button');
+        button.id = 'manual-news-button';
+        button.title = 'Показать уведомление о последней новости';
+        button.innerHTML = '🔄'; // Иконка повтора
+        button.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4d79ff, #0033cc); /* Синий градиент, отличный от красного уведомлений */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 9999;
+            font-size: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        button.onmouseover = () => {
+            button.style.transform = 'scale(1.1)';
+            button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.2)';
+        };
+        button.onmouseout = () => {
+            button.style.transform = 'scale(1)';
+            button.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)';
+        };
+        button.onclick = async function() {
+            try {
+                const newsData = await checkForNewNews();
+                if (newsData) {
+                    createNotification(newsData);
+                    // Успех: временно меняем иконку
+                    button.innerHTML = '✓';
+                    button.disabled = true;
+                    button.style.background = 'linear-gradient(135deg, #00cc00, #009900)';
+                    setTimeout(() => {
+                        button.innerHTML = '🔄';
+                        button.disabled = false;
+                        button.style.background = 'linear-gradient(135deg, #4d79ff, #0033cc)';
+                    }, 2000);
+                } else {
+                    // Нет новости
+                    button.innerHTML = '×';
+                    button.disabled = true;
+                    button.style.background = 'linear-gradient(135deg, #ff4d4d, #cc0000)';
+                    setTimeout(() => {
+                        button.innerHTML = '🔄';
+                        button.disabled = false;
+                        button.style.background = 'linear-gradient(135deg, #4d79ff, #0033cc)';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Ошибка при ручном показе уведомления:', error);
+            }
+        };
+        document.body.appendChild(button);
+    }
+
     // Асинхронная функция для обработки проверки
     async function performCheck() {
         try {
@@ -351,6 +416,7 @@
         });
     }
 
+    createManualButton();
 
     // Запускаем проверку сразу при загрузке страницы
     performCheck();
