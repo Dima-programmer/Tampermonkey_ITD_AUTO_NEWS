@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.5
+// @version      2.6
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -311,10 +311,6 @@
         setTimeout(() => {
             notification.style.transform = 'translateY(0)'; // Выскочить
         }, 150);
-
-
-        // Таймер на 20 секунд для автоматического закрытия
-        setTimeout(removeNotification, 20000);
     }
 
     // Функция для обновления позиций уведомлений
