@@ -325,8 +325,8 @@
         }, 150);
 
 
-        // Таймер на 20 секунд для автоматического закрытия
-        setTimeout(removeNotification, 20000);
+        // Таймер на 15 секунд для автоматического закрытия
+        setTimeout(removeNotification, 15000);
     }
 
     // Функция для обновления позиций уведомлений
@@ -382,11 +382,6 @@
                         allNotifications.push(newsData);
                         saveAllNotifications();
                     }
-                    allNotifications.push(newsData);
-                    allNotifications.push(newsData);
-                    allNotifications.push(newsData);
-                    allNotifications.push(newsData);
-                    allNotifications.push(newsData);
                     createNotification(newsData);
                     // Успех: временно меняем иконку
                     button.innerHTML = '✓';
