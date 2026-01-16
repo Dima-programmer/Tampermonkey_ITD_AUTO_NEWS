@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.7
+// @version      2.8
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -22,10 +22,15 @@
 
     let lastNewsLinks = [];
     let activeNotifications = [];
+    let allNotifications = [];
 
     lastNewsLinks = JSON.parse(localStorage.getItem('lastNewsLinks')) || lastNewsLinks || [];
+    allNotifications = JSON.parse(localStorage.getItem('allNotifications')) || allNotifications || [];
     function saveLastNewsLinks() {
         localStorage.setItem('lastNewsLinks', JSON.stringify(lastNewsLinks));
+    }
+    function saveAllNotifications() {
+        localStorage.setItem('allNotifications', JSON.stringify(allNotifications));
     }
 
     // Функция для парсинга ссылки на новость из HTML
@@ -374,7 +379,14 @@
                     if (!lastNewsLinks.includes(newsData.link)){
                         lastNewsLinks.push(newsData.link);
                         saveLastNewsLinks();
+                        allNotifications.push(newsData);
+                        saveAllNotifications();
                     }
+                    allNotifications.push(newsData);
+                    allNotifications.push(newsData);
+                    allNotifications.push(newsData);
+                    allNotifications.push(newsData);
+                    allNotifications.push(newsData);
                     createNotification(newsData);
                     // Успех: временно меняем иконку
                     button.innerHTML = '✓';
@@ -403,6 +415,292 @@
         document.body.appendChild(button);
     }
 
+    // Функция для создания кнопки истории уведомлений
+    function createHistoryButton() {
+        const button = document.createElement('button');
+        button.id = 'history-notifications-button';
+        button.title = 'Показать историю уведомлений';
+        button.innerHTML = '🔔';
+        button.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #a0a0a0, #808080);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 9999;
+            font-size: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        button.onmouseover = () => {
+            button.style.transform = 'scale(1.1)';
+            button.style.boxShadow = '0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.2)';
+        };
+        button.onmouseout = () => {
+            button.style.transform = 'scale(1)';
+            button.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)';
+        };
+        button.onclick = function() {
+            const existingMenu = document.getElementById('history-menu');
+            if (existingMenu) {
+                existingMenu.remove();
+            } else {
+                createHistoryMenu();
+            }
+        };
+        document.body.appendChild(button);
+    }
+
+    // Функция для создания меню истории
+    function createHistoryMenu() {
+        // Создаем затемнение фона
+        const overlay = document.createElement('div');
+        overlay.id = 'history-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        `;
+        overlay.onclick = function() {
+            const menu = document.getElementById('history-menu');
+            if (menu) menu.remove();
+            overlay.remove();
+        };
+        document.body.appendChild(overlay);
+
+        const menu = document.createElement('div');
+        menu.id = 'history-menu';
+        menu.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            max-height: 80vh;
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            border: 1px solid #ccc;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 10001;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        `;
+
+        // Заголовок меню
+        const title = document.createElement('h3');
+        title.textContent = 'История уведомлений';
+        title.style.cssText = `
+            margin: 0 0 20px 0;
+            color: #333;
+            text-align: center;
+        `;
+        menu.appendChild(title);
+
+        // Внутренний контейнер для прокрутки уведомлений
+        const scrollableContainer = document.createElement('div');
+        scrollableContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            max-height: calc(80vh - 120px); /* Учитываем padding и заголовок */
+            overflow-y: auto;
+            border-radius: 15px; /* Закругленные края как у уведомлений */
+        `;
+
+        // Если уведомлений 5 или больше, добавляем контейнер с фоном
+        if (allNotifications.length >= 5) {
+            const notificationsContainer = document.createElement('div');
+            notificationsContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                max-height: calc(80vh - 120px); /* Учитываем padding и заголовок */
+                background: linear-gradient(135deg, #f5f5f5, #e0e0e0); /* Фон совпадает с меню */
+                border-radius: 15px; /* Закругленные края как у уведомлений */
+                padding: 10px; /* Padding для фона */
+            `;
+            notificationsContainer.appendChild(scrollableContainer);
+            menu.appendChild(notificationsContainer);
+        } else {
+            menu.appendChild(scrollableContainer);
+        }
+
+        // Стилизация полоски прокрутки (скрываем встроенную)
+        const style = document.createElement('style');
+        style.textContent = `
+            #history-menu div::-webkit-scrollbar {
+                display: none;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Добавляем уведомления с анимацией
+        allNotifications.forEach((newsData, index) => {
+            const { link, title, text, imageSrc } = newsData;
+            const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
+            const fullText = title + '\n\n' + text + hashtags;
+
+            // Создаем контейнер уведомления для истории
+            const notificationElement = document.createElement('div');
+            notificationElement.style.cssText = `
+                background: linear-gradient(135deg, #4d79ff, #0033cc);
+                color: white;
+                padding: 20px;
+                box-sizing: border-box;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 14px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-radius: 15px;
+                margin-bottom: 10px;
+                opacity: 0;
+                transition: opacity 0.5s ease;
+            `;
+
+            // Контейнер для текста
+            const textContainer = document.createElement('div');
+            textContainer.style.flex = '1';
+            textContainer.style.marginRight = '20px';
+            textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
+
+            // Кнопки
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.style.display = 'flex';
+            buttonsContainer.style.gap = '10px';
+
+            // Кнопка копирования
+            const copyButton = document.createElement('button');
+            copyButton.textContent = 'КОПИРОВАТЬ';
+            copyButton.style.cssText = `
+                background-color: rgba(255,255,255,0.2);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.3);
+                padding: 10px 15px;
+                cursor: pointer;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 500;
+                transition: background-color 0.3s ease;
+            `;
+            copyButton.onmouseover = () => copyButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
+            copyButton.onmouseout = () => copyButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+            copyButton.onclick = async function() {
+                try {
+                    await navigator.clipboard.writeText(fullText);
+                    const originalText = copyButton.textContent;
+                    copyButton.textContent = '✓';
+                    copyButton.disabled = true;
+                    copyButton.style.backgroundColor = 'rgba(0,255,0,0.3)';
+                    setTimeout(() => {
+                        copyButton.textContent = originalText;
+                        copyButton.disabled = false;
+                        copyButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Ошибка копирования:', error);
+                }
+            };
+
+            // Кнопка отправки
+            const sendButton = document.createElement('button');
+            sendButton.textContent = 'ОТПРАВИТЬ НОВОСТЬ';
+            sendButton.style.cssText = `
+                background-color: rgba(255,255,255,0.2);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.3);
+                padding: 10px 15px;
+                cursor: pointer;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 500;
+                transition: background-color 0.3s ease;
+                text-align: center;
+                min-width: 120px;
+            `;
+            sendButton.onmouseover = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
+            sendButton.onmouseout = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+            sendButton.onclick = async function() {
+                if (typeof create_post === 'function') {
+                    try {
+                        const result = await create_post(fullText, imageSrc);
+                        if (result && typeof result.then === 'function') {
+                            await result;
+                        } else if (result === false) {
+                            throw new Error('Failed');
+                        }
+                        sendButton.textContent = '✓';
+                        sendButton.disabled = true;
+                        sendButton.style.cursor = 'default';
+                        sendButton.style.backgroundColor = 'rgba(0,255,0,0.3)';
+                    } catch (error) {
+                        console.error('Ошибка при вызове create_post:', error);
+                        const originalText = sendButton.textContent;
+                        sendButton.textContent = '×';
+                        sendButton.disabled = true;
+                        sendButton.style.backgroundColor = 'rgba(255,0,0,0.3)';
+                        setTimeout(() => {
+                            sendButton.textContent = originalText;
+                            sendButton.disabled = false;
+                            sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                        }, 2000);
+                    }
+                } else {
+                    console.error('Функция create_post не найдена!');
+                }
+            };
+
+            buttonsContainer.appendChild(copyButton);
+            buttonsContainer.appendChild(sendButton);
+            notificationElement.appendChild(textContainer);
+            notificationElement.appendChild(buttonsContainer);
+            scrollableContainer.appendChild(notificationElement);
+
+            // Анимация появления
+            setTimeout(() => {
+                notificationElement.style.opacity = '1';
+            }, index * 200);
+        });
+
+        // Кнопка закрытия
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '✕';
+        closeButton.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ccc;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        `;
+        closeButton.onclick = function() {
+            const menu = document.getElementById('history-menu');
+            if (menu) menu.remove();
+            overlay.remove();
+            // Удаляем стиль scrollbar
+            if (style.parentNode) style.parentNode.removeChild(style);
+        };
+        menu.appendChild(closeButton);
+
+        document.body.appendChild(menu);
+    }
+
     // Асинхронная функция для обработки проверки
     async function performCheck() {
         try {
@@ -410,6 +708,8 @@
             if (newsData && !lastNewsLinks.includes(newsData.link)) {
                 lastNewsLinks.push(newsData.link);
                 saveLastNewsLinks();
+                allNotifications.push(newsData);
+                saveAllNotifications();
                 createNotification(newsData);
             }
         } catch (error) {
@@ -517,6 +817,7 @@
     }
 
     createManualButton();
+    createHistoryButton();
 
     // Запускаем проверку сразу при загрузке страницы
     performCheck();
