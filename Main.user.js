@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.6
+// @version      2.7
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -81,7 +81,14 @@
             text = 'ТЕКСТ НЕ НАЙДЕН';
         }
 
-        return { title, text };
+        // Изображение: первый div с классом начинающимся на Poster_cover__, внутри img
+        const imageElement = doc.querySelector('div[class*="Poster_cover__"] img');
+        let imageSrc = imageElement ? imageElement.src : null;
+        if (imageSrc && imageSrc.startsWith('/')) {
+            imageSrc = 'https://kod.ru' + imageSrc;
+        }
+
+        return { title, text, imageSrc };
     }
 
     // Функция для проверки новостей с использованием GM_xmlhttpRequest
@@ -102,8 +109,8 @@
                                 onload: function(newsResponse) {
                                     if (newsResponse.status === 200) {
                                         const newsHtml = newsResponse.responseText;
-                                        const { title, text } = parseNewsContentFromHTML(newsHtml);
-                                        resolve({ link, title, text });
+                                        const { title, text, imageSrc } = parseNewsContentFromHTML(newsHtml);
+                                        resolve({ link, title, text, imageSrc });
                                     } else {
                                         reject(new Error('Ошибка загрузки новости: ' + newsResponse.status));
                                     }
@@ -128,8 +135,8 @@
 
     // Функция для создания уведомления
     function createNotification(newsData) {
-        const { link, title, text } = newsData;
-        const hashtags = '\n\n#kod #itdkod\n#КААЛИЦИЯ #дым #potatopopular #potatosk #cakepopular #считаемманулов #тортодым #бобр #NewsOfficial\nЛюбимая #КААЛИЦИЯ: 🥴@kamra 👾@zzzuuuk 📰@newsoffc 🦦@BABRIK 🖕@Feihuya77 🕶@Artemius  🤯@dmitrii_gr 🤠@l1kaa11 🥴@skorlange';
+        const { link, title, text, imageSrc } = newsData;
+        const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
         const fullText = title + '\n\n' + text + hashtags;
 
         // Создаем контейнер уведомления
@@ -140,7 +147,7 @@
             left: 5%;
             width: 90%;
             max-width: 800px;
-            background: linear-gradient(135deg, #ff4d4d, #cc0000); /* Современный градиент */
+            background: linear-gradient(135deg, #4d79ff, #0033cc); /* Синий градиент */
             color: white;
             padding: 20px;
             box-sizing: border-box;
@@ -222,7 +229,7 @@
         sendButton.onclick = async function() {
             if (typeof create_post === 'function') {
                 try {
-                    const result = create_post(fullText);
+                    const result = await create_post(fullText, imageSrc);
                     if (result && typeof result.then === 'function') {
                         await result; // Асинхронный случай
                     } else if (result === false) {
@@ -311,6 +318,10 @@
         setTimeout(() => {
             notification.style.transform = 'translateY(0)'; // Выскочить
         }, 150);
+
+
+        // Таймер на 20 секунд для автоматического закрытия
+        setTimeout(removeNotification, 20000);
     }
 
     // Функция для обновления позиций уведомлений
@@ -406,35 +417,94 @@
         }
     }
 
-    function create_post(text) {
+    function create_post(text, imageSrc) {
         // Возвращаем всю цепочку, чтобы вызывающий код мог знать о результате
         return fetch('/api/v1/auth/refresh', { method: 'POST' })
             .then(resRefresh => {
             // Проверяем первый запрос
             if (!resRefresh.ok) {
                 console.error(`Refresh failed with status ${resRefresh.status}`);
-                throw new Error('Refresh failed'); // Прерываем цепочку и идем в .catch
+                return resRefresh.text().then(text => console.error('Refresh response:', text)).then(() => { throw new Error('Refresh failed'); });
             }
             return resRefresh.json(); // Возвращаем Promise с данными
         })
             .then(data => {
             const accessToken = data.accessToken;
 
-            // Отправляем второй запрос, используя данные первого
-            return fetch('/api/posts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
-                },
-                body: JSON.stringify({ content: text })
-            });
+            let attachmentIds = [];
+
+            // Если есть изображение, загружаем его
+            if (imageSrc) {
+                return fetch(imageSrc)
+                    .then(res => {
+                        if (!res.ok) throw new Error('Failed to fetch image');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        console.log('Original blob size:', blob.size, 'type:', blob.type);
+                        // Конвертируем в PNG
+                        return new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                                canvas.toBlob(resolve, 'image/png');
+                            };
+                            img.onerror = reject;
+                            img.src = URL.createObjectURL(blob);
+                        });
+                    })
+                    .then(convertedBlob => {
+                        console.log('Converted blob size:', convertedBlob.size, 'type:', convertedBlob.type);
+                        const formData = new FormData();
+                        formData.append('file', convertedBlob);
+                        return fetch('/api/files/upload', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`
+                            },
+                            body: formData
+                        });
+                    })
+                    .then(resUpload => {
+                        if (resUpload.status !== 201) {
+                            console.error(`Upload failed with status ${resUpload.status}`);
+                            return resUpload.text().then(text => console.error('Upload response:', text)).then(() => { throw new Error('Upload failed'); });
+                        }
+                        return resUpload.json();
+                    })
+                    .then(uploadData => {
+                        attachmentIds = [uploadData.id];
+                        // Теперь отправляем пост
+                        return fetch('/api/posts', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${accessToken}`
+                            },
+                            body: JSON.stringify({ content: text, attachmentIds })
+                        });
+                    });
+            } else {
+                // Отправляем пост без изображения
+                return fetch('/api/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({ content: text })
+                });
+            }
         })
             .then(resPost => {
-            // Проверяем второй запрос
+            // Проверяем запрос на пост
             if (resPost.status !== 200 && resPost.status !== 201) {
                 console.error(`Post failed with status ${resPost.status}`);
-                return false;
+                return resPost.text().then(text => console.error('Post response:', text)).then(() => false);
             }
             console.log('Post created successfully');
             return true;
