@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.8
+// @version      2.9
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -457,7 +457,6 @@
 
     // Функция для создания меню истории
     function createHistoryMenu() {
-        // Создаем затемнение фона
         const overlay = document.createElement('div');
         overlay.id = 'history-overlay';
         overlay.style.cssText = `
@@ -496,7 +495,6 @@
             font-size: 14px;
         `;
 
-        // Заголовок меню
         const title = document.createElement('h3');
         title.textContent = 'История уведомлений';
         title.style.cssText = `
@@ -506,26 +504,24 @@
         `;
         menu.appendChild(title);
 
-        // Внутренний контейнер для прокрутки уведомлений
         const scrollableContainer = document.createElement('div');
         scrollableContainer.style.cssText = `
             display: flex;
             flex-direction: column;
-            max-height: calc(80vh - 120px); /* Учитываем padding и заголовок */
+            max-height: calc(80vh - 120px);
             overflow-y: auto;
-            border-radius: 15px; /* Закругленные края как у уведомлений */
+            border-radius: 15px;
         `;
 
-        // Если уведомлений 5 или больше, добавляем контейнер с фоном
         if (allNotifications.length >= 5) {
             const notificationsContainer = document.createElement('div');
             notificationsContainer.style.cssText = `
                 display: flex;
                 flex-direction: column;
-                max-height: calc(80vh - 120px); /* Учитываем padding и заголовок */
-                background: linear-gradient(135deg, #f5f5f5, #e0e0e0); /* Фон совпадает с меню */
-                border-radius: 15px; /* Закругленные края как у уведомлений */
-                padding: 10px; /* Padding для фона */
+                max-height: calc(80vh - 120px);
+                background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+                border-radius: 15px;
+                padding: 10px;
             `;
             notificationsContainer.appendChild(scrollableContainer);
             menu.appendChild(notificationsContainer);
@@ -533,7 +529,6 @@
             menu.appendChild(scrollableContainer);
         }
 
-        // Стилизация полоски прокрутки (скрываем встроенную)
         const style = document.createElement('style');
         style.textContent = `
             #history-menu div::-webkit-scrollbar {
@@ -542,13 +537,11 @@
         `;
         document.head.appendChild(style);
 
-        // Добавляем уведомления с анимацией
-        allNotifications.forEach((newsData, index) => {
+        allNotifications.slice().reverse().forEach((newsData, index) => {
             const { link, title, text, imageSrc } = newsData;
             const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
             const fullText = title + '\n\n' + text + hashtags;
 
-            // Создаем контейнер уведомления для истории
             const notificationElement = document.createElement('div');
             notificationElement.style.cssText = `
                 background: linear-gradient(135deg, #4d79ff, #0033cc);
@@ -567,18 +560,15 @@
                 transition: opacity 0.5s ease;
             `;
 
-            // Контейнер для текста
             const textContainer = document.createElement('div');
             textContainer.style.flex = '1';
             textContainer.style.marginRight = '20px';
             textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
 
-            // Кнопки
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
             buttonsContainer.style.gap = '10px';
 
-            // Кнопка копирования
             const copyButton = document.createElement('button');
             copyButton.textContent = 'КОПИРОВАТЬ';
             copyButton.style.cssText = `
@@ -611,7 +601,6 @@
                 }
             };
 
-            // Кнопка отправки
             const sendButton = document.createElement('button');
             sendButton.textContent = 'ОТПРАВИТЬ НОВОСТЬ';
             sendButton.style.cssText = `
@@ -665,13 +654,11 @@
             notificationElement.appendChild(buttonsContainer);
             scrollableContainer.appendChild(notificationElement);
 
-            // Анимация появления
             setTimeout(() => {
                 notificationElement.style.opacity = '1';
             }, index * 200);
         });
 
-        // Кнопка закрытия
         const closeButton = document.createElement('button');
         closeButton.textContent = '✕';
         closeButton.style.cssText = `
@@ -688,7 +675,6 @@
             const menu = document.getElementById('history-menu');
             if (menu) menu.remove();
             overlay.remove();
-            // Удаляем стиль scrollbar
             if (style.parentNode) style.parentNode.removeChild(style);
         };
         menu.appendChild(closeButton);
