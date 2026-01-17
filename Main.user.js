@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.9.5
+// @version      2.9.6
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -142,7 +142,7 @@
     // Функция для обновления кнопок отправки для данной ссылки
     function updateSendButtonsForLink(link) {
         document.querySelectorAll('[data-link="' + link + '"] button').forEach(button => {
-            if (button.textContent === 'ОТПРАВИТЬ НОВОСТЬ') {
+            if (button.textContent === 'ОПУБЛИКОВАТЬ') {
                 button.textContent = '✓';
                 button.style.backgroundColor = 'rgba(0,255,0,0.3)';
                 button.style.cursor = 'default';
@@ -225,7 +225,7 @@
         };
 
         const sendButton = document.createElement('button');
-        sendButton.textContent = sent ? '✓' : 'ОТПРАВИТЬ НОВОСТЬ';
+        sendButton.textContent = sent ? '✓' : 'ОПУБЛИКОВАТЬ';
         sendButton.style.cssText = `
             background-color: ${sent ? 'rgba(0,255,0,0.3)' : 'rgba(255,255,255,0.2)'};
             color: white;
@@ -610,7 +610,7 @@
             };
 
             const sendButton = document.createElement('button');
-            sendButton.textContent = sent ? '✓' : 'ОТПРАВИТЬ НОВОСТЬ';
+            sendButton.textContent = sent ? '✓' : 'ОПУБЛИКОВАТЬ';
             sendButton.style.cssText = `
                 background-color: ${sent ? 'rgba(0,255,0,0.3)' : 'rgba(255,255,255,0.2)'};
                 color: white;
