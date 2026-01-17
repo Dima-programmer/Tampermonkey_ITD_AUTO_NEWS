@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.9
+// @version      2.9.5
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -24,8 +24,9 @@
     let activeNotifications = [];
     let allNotifications = [];
 
-    lastNewsLinks = JSON.parse(localStorage.getItem('lastNewsLinks')) || lastNewsLinks || [];
-    allNotifications = JSON.parse(localStorage.getItem('allNotifications')) || allNotifications || [];
+    lastNewsLinks = JSON.parse(localStorage.getItem('lastNewsLinks')) || [];
+    allNotifications = JSON.parse(localStorage.getItem('allNotifications')) || [];
+
     function saveLastNewsLinks() {
         localStorage.setItem('lastNewsLinks', JSON.stringify(lastNewsLinks));
     }
@@ -138,21 +139,33 @@
         });
     }
 
+    // Функция для обновления кнопок отправки для данной ссылки
+    function updateSendButtonsForLink(link) {
+        document.querySelectorAll('[data-link="' + link + '"] button').forEach(button => {
+            if (button.textContent === 'ОТПРАВИТЬ НОВОСТЬ') {
+                button.textContent = '✓';
+                button.style.backgroundColor = 'rgba(0,255,0,0.3)';
+                button.style.cursor = 'default';
+                button.disabled = true;
+            }
+        });
+    }
+
     // Функция для создания уведомления
     function createNotification(newsData) {
-        const { link, title, text, imageSrc } = newsData;
+        const { link, title, text, imageSrc, sent = false } = newsData;
         const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
         const fullText = title + '\n\n' + text + hashtags;
 
-        // Создаем контейнер уведомления
         const notification = document.createElement('div');
         notification.id = 'tass-notification';
+        notification.setAttribute('data-link', link);
         notification.style.cssText = `
             position: fixed;
             left: 5%;
             width: 90%;
             max-width: 800px;
-            background: linear-gradient(135deg, #4d79ff, #0033cc); /* Синий градиент */
+            background: linear-gradient(135deg, #4d79ff, #0033cc);
             color: white;
             padding: 20px;
             box-sizing: border-box;
@@ -163,37 +176,35 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-radius: 15px; /* Более закругленные края */
-            transform: translateY(-120%); /* Начальная позиция для анимации */
-            transition: top 0.6s ease, transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.6s ease; /* Плавная анимация для top, transform и opacity */
-            backdrop-filter: blur(10px); /* Современный эффект размытия */
+            border-radius: 15px;
+            transform: translateY(-120%);
+            transition: top 0.6s ease, transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.6s ease;
+            backdrop-filter: blur(10px);
             opacity: 1;
-    `;
+        `;
 
-        // Контейнер для текста
         const textContainer = document.createElement('div');
         textContainer.style.flex = '1';
         textContainer.style.marginRight = '20px';
         textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
-        // Кнопки
+
         const buttonsContainer = document.createElement('div');
         buttonsContainer.style.display = 'flex';
         buttonsContainer.style.gap = '10px';
 
-        // Кнопка копирования
         const copyButton = document.createElement('button');
         copyButton.textContent = 'КОПИРОВАТЬ';
         copyButton.style.cssText = `
-        background-color: rgba(255,255,255,0.2);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.3);
-        padding: 10px 15px;
-        cursor: pointer;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 500;
-        transition: background-color 0.3s ease;
-    `;
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        `;
         copyButton.onmouseover = () => copyButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
         copyButton.onmouseout = () => copyButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
         copyButton.onclick = async function() {
@@ -213,46 +224,48 @@
             }
         };
 
-        // Кнопка отправки
         const sendButton = document.createElement('button');
-        sendButton.textContent = 'ОТПРАВИТЬ НОВОСТЬ';
+        sendButton.textContent = sent ? '✓' : 'ОТПРАВИТЬ НОВОСТЬ';
         sendButton.style.cssText = `
-            background-color: rgba(255,255,255,0.2);
+            background-color: ${sent ? 'rgba(0,255,0,0.3)' : 'rgba(255,255,255,0.2)'};
             color: white;
             border: 1px solid rgba(255,255,255,0.3);
             padding: 10px 15px;
-            cursor: pointer;
+            cursor: ${sent ? 'default' : 'pointer'};
             border-radius: 8px;
             font-size: 12px;
             font-weight: 500;
             transition: background-color 0.3s ease;
-            text-align: center; /* Центрирование текста */
-            min-width: 120px; /* Фиксированная минимальная ширина для сохранения размера */
-    `;
-        sendButton.onmouseover = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
-        sendButton.onmouseout = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+            text-align: center;
+            min-width: 120px;
+        `;
+        if (!sent) {
+            sendButton.onmouseover = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
+            sendButton.onmouseout = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+        }
         sendButton.onclick = async function() {
+            if (sent) return;
             if (typeof create_post === 'function') {
                 try {
                     const result = await create_post(fullText, imageSrc);
                     if (result && typeof result.then === 'function') {
-                        await result; // Асинхронный случай
+                        await result;
                     } else if (result === false) {
-                        throw new Error('Failed'); // Синхронный неудача
+                        throw new Error('Failed');
                     }
-                    // Успех
                     sendButton.textContent = '✓';
                     sendButton.disabled = true;
                     sendButton.style.cursor = 'default';
                     sendButton.style.backgroundColor = 'rgba(0,255,0,0.3)';
-                    // Уведомление остается открытым 3 сек
+                    newsData.sent = true;
+                    saveAllNotifications();
+                    updateSendButtonsForLink(link);
                     setTimeout(() => {
                         if (notification.parentNode) {
                             notification.remove();
                         }
                     }, 2000);
                 } catch (error) {
-                    // Неудача
                     console.error('Ошибка при вызове create_post:', error);
                     const originalText = sendButton.textContent;
                     sendButton.textContent = '×';
@@ -269,8 +282,24 @@
             }
         };
 
-        // Функция для удаления уведомления с анимацией
-        function removeNotification() {
+        buttonsContainer.appendChild(copyButton);
+        buttonsContainer.appendChild(sendButton);
+        notification.appendChild(textContainer);
+        notification.appendChild(buttonsContainer);
+
+        const closeButton = document.createElement('span');
+        closeButton.textContent = '✕';
+        closeButton.title = 'Закрыть';
+        closeButton.style.cssText = `
+            font-size: 20px;
+            cursor: pointer;
+            color: white;
+            margin-left: 10px;
+            transition: color 0.3s ease;
+        `;
+        closeButton.onmouseover = () => closeButton.style.color = '#ffe6e6';
+        closeButton.onmouseout = () => closeButton.style.color = 'white';
+        closeButton.onclick = function() {
             notification.style.transform = 'translateY(-120%)';
             notification.style.opacity = '0';
             setTimeout(() => {
@@ -282,52 +311,29 @@
                     notification.parentNode.removeChild(notification);
                 }
                 updateNotificationPositions();
-            }, 600); // Время анимации
-        }
-
-        // Крестик для закрытия
-        const closeButton = document.createElement('span');
-        closeButton.textContent = '✕';
-        closeButton.title = 'Закрыть'; // Подсказка для доступности
-        closeButton.style.cssText = `
-            font-size: 20px;
-            cursor: pointer;
-            color: white;
-            margin-left: 10px;
-            transition: color 0.3s ease;
-    `;
-        closeButton.onmouseover = () => closeButton.style.color = '#ffe6e6';
-        closeButton.onmouseout = () => closeButton.style.color = 'white';
-        closeButton.onclick = removeNotification;
-
-        // Собираем элементы
-        buttonsContainer.appendChild(copyButton);
-        buttonsContainer.appendChild(sendButton);
-        notification.appendChild(textContainer);
-        notification.appendChild(buttonsContainer);
+            }, 600);
+        };
         notification.appendChild(closeButton);
 
-        // Добавляем в body
         document.body.appendChild(notification);
 
-        // Добавляем в начало массива активных уведомлений (новые сверху)
         activeNotifications.unshift(notification);
-
-        // Обновляем позиции всех уведомлений
         updateNotificationPositions();
 
-        // Анимация появления: дернуться, а потом выскочить
         setTimeout(() => {
-            notification.style.transform = 'translateY(-100%)'; // Дернуться
+            notification.style.transform = 'translateY(-100%)';
         }, 10);
         setTimeout(() => {
-            notification.style.transform = 'translateY(0)'; // Выскочить
+            notification.style.transform = 'translateY(0)';
         }, 150);
 
-
-        // Таймер на 15 секунд для автоматического закрытия
-        setTimeout(removeNotification, 15000);
+        setTimeout(() => {
+            if (notification.parentNode) {
+                closeButton.onclick();
+            }
+        }, 20000);
     }
+
 
     // Функция для обновления позиций уведомлений
     function updateNotificationPositions() {
@@ -343,14 +349,14 @@
         const button = document.createElement('button');
         button.id = 'manual-news-button';
         button.title = 'Показать уведомление о последней новости';
-        button.innerHTML = '🔄'; // Иконка повтора
+        button.innerHTML = '🔄';
         button.style.cssText = `
             position: fixed;
             top: 20px;
             left: 20px;
             width: 50px;
             height: 50px;
-            background: linear-gradient(135deg, #4d79ff, #0033cc); /* Синий градиент, отличный от красного уведомлений */
+            background: linear-gradient(135deg, #4d79ff, #0033cc);
             color: white;
             border: none;
             border-radius: 50%;
@@ -376,6 +382,8 @@
             try {
                 const newsData = await checkForNewNews();
                 if (newsData) {
+                    const existing = allNotifications.find(n => n.link === newsData.link);
+                    newsData.sent = existing ? existing.sent : false;
                     if (!lastNewsLinks.includes(newsData.link)){
                         lastNewsLinks.push(newsData.link);
                         saveLastNewsLinks();
@@ -383,7 +391,6 @@
                         saveAllNotifications();
                     }
                     createNotification(newsData);
-                    // Успех: временно меняем иконку
                     button.innerHTML = '✓';
                     button.disabled = true;
                     button.style.background = 'linear-gradient(135deg, #00cc00, #009900)';
@@ -393,7 +400,6 @@
                         button.style.background = 'linear-gradient(135deg, #4d79ff, #0033cc)';
                     }, 2000);
                 } else {
-                    // Нет новости
                     button.innerHTML = '×';
                     button.disabled = true;
                     button.style.background = 'linear-gradient(135deg, #ff4d4d, #cc0000)';
@@ -538,11 +544,13 @@
         document.head.appendChild(style);
 
         allNotifications.slice().reverse().forEach((newsData, index) => {
-            const { link, title, text, imageSrc } = newsData;
+            const { link, title, text, imageSrc, sent = false } = newsData;
             const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
             const fullText = title + '\n\n' + text + hashtags;
 
             const notificationElement = document.createElement('div');
+            notificationElement.className = 'notification-element';
+            notificationElement.setAttribute('data-link', link);
             notificationElement.style.cssText = `
                 background: linear-gradient(135deg, #4d79ff, #0033cc);
                 color: white;
@@ -602,13 +610,13 @@
             };
 
             const sendButton = document.createElement('button');
-            sendButton.textContent = 'ОТПРАВИТЬ НОВОСТЬ';
+            sendButton.textContent = sent ? '✓' : 'ОТПРАВИТЬ НОВОСТЬ';
             sendButton.style.cssText = `
-                background-color: rgba(255,255,255,0.2);
+                background-color: ${sent ? 'rgba(0,255,0,0.3)' : 'rgba(255,255,255,0.2)'};
                 color: white;
                 border: 1px solid rgba(255,255,255,0.3);
                 padding: 10px 15px;
-                cursor: pointer;
+                cursor: ${sent ? 'default' : 'pointer'};
                 border-radius: 8px;
                 font-size: 12px;
                 font-weight: 500;
@@ -616,9 +624,12 @@
                 text-align: center;
                 min-width: 120px;
             `;
-            sendButton.onmouseover = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
-            sendButton.onmouseout = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+            if (!sent) {
+                sendButton.onmouseover = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.3)';
+                sendButton.onmouseout = () => sendButton.style.backgroundColor = 'rgba(255,255,255,0.2)';
+            }
             sendButton.onclick = async function() {
+                if (sent) return;
                 if (typeof create_post === 'function') {
                     try {
                         const result = await create_post(fullText, imageSrc);
@@ -631,6 +642,9 @@
                         sendButton.disabled = true;
                         sendButton.style.cursor = 'default';
                         sendButton.style.backgroundColor = 'rgba(0,255,0,0.3)';
+                        newsData.sent = true;
+                        saveAllNotifications();
+                        updateSendButtonsForLink(link);
                     } catch (error) {
                         console.error('Ошибка при вызове create_post:', error);
                         const originalText = sendButton.textContent;
@@ -689,6 +703,8 @@
             if (newsData && !lastNewsLinks.includes(newsData.link)) {
                 lastNewsLinks.push(newsData.link);
                 saveLastNewsLinks();
+                const existing = allNotifications.find(n => n.link === newsData.link);
+                newsData.sent = existing ? existing.sent : false;
                 allNotifications.push(newsData);
                 saveAllNotifications();
                 createNotification(newsData);
