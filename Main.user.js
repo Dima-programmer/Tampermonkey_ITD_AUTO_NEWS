@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.10.0
+// @version      2.11.0
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -15,6 +15,8 @@
 // @tag          news
 // @supportURL   https://t.me/dmitrii_gr
 // @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
 // ==/UserScript==
 
 (function() {
@@ -24,16 +26,15 @@
     let activeNotifications = [];
     let allNotifications = [];
 
-    lastNewsLinks = JSON.parse(localStorage.getItem('lastNewsLinks')) || [];
-    allNotifications = JSON.parse(localStorage.getItem('allNotifications')) || [];
+    lastNewsLinks = GM_getValue('lastNewsLinks', []);
+    allNotifications = GM_getValue('allNotifications', []);
 
     function saveLastNewsLinks() {
-        localStorage.setItem('lastNewsLinks', JSON.stringify(lastNewsLinks));
+        GM_setValue('lastNewsLinks', lastNewsLinks);
     }
     function saveAllNotifications() {
-        localStorage.setItem('allNotifications', JSON.stringify(allNotifications));
+        GM_setValue('allNotifications', allNotifications);
     }
-
     // Функция для парсинга ссылки на новость из HTML
     function parseNewsLinkFromHTML(html) {
         const parser = new DOMParser();
