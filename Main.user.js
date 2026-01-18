@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.9.7
+// @version      2.10.0
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -482,6 +482,16 @@
         };
         document.body.appendChild(overlay);
 
+        // Определяем тему сайта через data-theme у html
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        const menuBackground = isDark ? 'linear-gradient(135deg, #333, #555)' : 'linear-gradient(135deg, #f5f5f5, #e0e0e0)';
+        const notificationsContainerBackground = isDark ? 'linear-gradient(135deg, #333, #555)' : 'linear-gradient(135deg, #f5f5f5, #e0e0e0)';
+        const titleColor = isDark ? '#fff' : '#333';
+        const closeButtonBackground = isDark ? '#555' : '#ccc';
+        const closeButtonColor = isDark ? '#fff' : '#000';
+        const menuBorder = isDark ? 'none' : '1px solid #ccc';
+
         const menu = document.createElement('div');
         menu.id = 'history-menu';
         menu.style.cssText = `
@@ -491,8 +501,8 @@
             transform: translate(-50%, -50%);
             width: 800px;
             max-height: 80vh;
-            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
-            border: 1px solid #ccc;
+            background: ${menuBackground};
+            border: ${menuBorder};
             border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             z-index: 10001;
@@ -505,12 +515,13 @@
         title.textContent = 'История уведомлений';
         title.style.cssText = `
             margin: 0 0 20px 0;
-            color: #333;
+            color: ${titleColor};
             text-align: center;
         `;
         menu.appendChild(title);
 
         const scrollableContainer = document.createElement('div');
+        scrollableContainer.className = 'scrollable-container';
         scrollableContainer.style.cssText = `
             display: flex;
             flex-direction: column;
@@ -525,7 +536,7 @@
                 display: flex;
                 flex-direction: column;
                 max-height: calc(80vh - 120px);
-                background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+                background: ${notificationsContainerBackground};
                 border-radius: 15px;
                 padding: 10px;
             `;
@@ -538,7 +549,17 @@
         const style = document.createElement('style');
         style.textContent = `
             #history-menu div::-webkit-scrollbar {
-                display: none;
+                width: 8px !important;
+            }
+            #history-menu div::-webkit-scrollbar-track {
+                background: transparent !important;
+            }
+            #history-menu div::-webkit-scrollbar-thumb {
+                background: transparent !important;
+                border-radius: 4px !important;
+            }
+            #history-menu div::-webkit-scrollbar-corner {
+                background: transparent !important;
             }
         `;
         document.head.appendChild(style);
@@ -679,7 +700,8 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            background: #ccc;
+            background: ${closeButtonBackground};
+            color: ${closeButtonColor};
             border: none;
             border-radius: 5px;
             padding: 5px 10px;
@@ -695,7 +717,6 @@
 
         document.body.appendChild(menu);
     }
-
     // Асинхронная функция для обработки проверки
     async function performCheck() {
         try {
