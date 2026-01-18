@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.9.6
+// @version      2.9.7
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -154,7 +154,7 @@
     // Функция для создания уведомления
     function createNotification(newsData) {
         const { link, title, text, imageSrc, sent = false } = newsData;
-        const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
+        const hashtags = '\n\n#kod #itdkod #дым #cakepopular\nАВТОРЫ: 🤯@dmitrii_gr 🕶@Artemius';
         const fullText = title + '\n\n' + text + hashtags;
 
         const notification = document.createElement('div');
@@ -545,7 +545,7 @@
 
         allNotifications.slice().reverse().forEach((newsData, index) => {
             const { link, title, text, imageSrc, sent = false } = newsData;
-            const hashtags = '\n\n#kod #itdkod\nСоздатели: 🤯@dmitrii_gr( #дым )  🕶@Artemius( #cakepopular )';
+            const hashtags = '\n\n#kod #itdkod #дым #cakepopular\nАВТОРЫ: 🤯@dmitrii_gr 🕶@Artemius';
             const fullText = title + '\n\n' + text + hashtags;
 
             const notificationElement = document.createElement('div');
