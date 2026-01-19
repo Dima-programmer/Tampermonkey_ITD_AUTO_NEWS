@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS
 // @updateURL    https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
 // @downloadURL  https://github.com/Dima-programmer/Tampermonkey_ITD_AUTO_NEWS/raw/refs/heads/main/Main.user.js
-// @version      2.11.0
+// @version      b3.0.0
 // @description  Мониторит kod.ru и показывает уведомление при новых новостях
 // @author       Дмитрий (#дым)
 // @match        https://*.xn--d1ah4a.com/*
@@ -39,15 +39,15 @@
     function parseNewsLinkFromHTML(html) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
-        const linkElement = doc.querySelector('a[class^="PostNews_imageWrap__"]');
+        const linkElement = doc.querySelector('a.tm-title__link');
         if (linkElement) {
             let href = linkElement.href;
-            // Если ссылка абсолютная, заменяем домен на kod.ru
+            // Если ссылка абсолютная, заменяем домен на habr.com
             if (href.startsWith('https://')) {
-                href = href.replace(/^https:\/\/[^\/]+/, 'https://kod.ru');
+                href = href.replace(/^https:\/\/[^\/]+/, 'https://habr.com');
             } else if (href.startsWith('/')) {
-                // Если относительная, добавляем kod.ru
-                href = 'https://kod.ru' + href;
+                // Если относительная, добавляем habr.com
+                href = 'https://habr.com' + href;
             }
             return href;
         }
@@ -59,12 +59,16 @@
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
-        // Заголовок: первый h1, у которого среди классов есть NewsTitle_title__[рандомные символы]
-        const titleElement = doc.querySelector('h1[class*="NewsTitle_title__"]');
-        const title = titleElement ? titleElement.textContent.trim().toUpperCase() : 'ЗАГОЛОВОК НЕ НАЙДЕН';
+        // Заголовок: внутри первого h1 с классами "tm-title tm-title_h1" все span соединённые воедино без разделителей
+        const titleElement = doc.querySelector('h1.tm-title.tm-title_h1');
+        let title = 'ЗАГОЛОВОК НЕ НАЙДЕН';
+        if (titleElement) {
+            const spans = titleElement.querySelectorAll('span');
+            title = Array.from(spans).map(span => span.textContent).join('').trim().toUpperCase();
+        }
 
-        // Текст: первый div, у которого среди классов есть NewsDetail_content__[рандомные символы]
-        const articleElement = doc.querySelector('div[class*="NewsDetail_content__"]');
+        // Текст: внутри первого div с id=post-content-body рекурсивно проходить, пока не найдёшь теги с текстом, затем все их объединить
+        const articleElement = doc.getElementById('post-content-body');
         let text = '';
         if (articleElement) {
             // Рекурсивная функция для сбора текста из всех тегов с текстовым содержимым
@@ -88,11 +92,16 @@
             text = 'ТЕКСТ НЕ НАЙДЕН';
         }
 
-        // Изображение: первый div с классом начинающимся на Poster_cover__, внутри img
-        const imageElement = doc.querySelector('div[class*="Poster_cover__"] img');
-        let imageSrc = imageElement ? imageElement.src : null;
-        if (imageSrc && imageSrc.startsWith('/')) {
-            imageSrc = 'https://kod.ru' + imageSrc;
+        // Изображение: так же внутри первого div с id=post-content-body рекурсивно проходить, пока не найдёшь картинку
+        let imageSrc = null;
+        if (articleElement) {
+            const imageElement = articleElement.querySelector('img');
+            if (imageElement) {
+                imageSrc = imageElement.src;
+                if (imageSrc && imageSrc.startsWith('/')) {
+                    imageSrc = 'https://habr.com' + imageSrc;
+                }
+            }
         }
 
         return { title, text, imageSrc };
@@ -103,7 +112,7 @@
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'GET',
-                url: 'https://kod.ru',
+                url: 'https://habr.com/ru/news/',
                 onload: function(response) {
                     if (response.status === 200) {
                         const html = response.responseText;
@@ -187,7 +196,7 @@
         const textContainer = document.createElement('div');
         textContainer.style.flex = '1';
         textContainer.style.marginRight = '20px';
-        textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
+        textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ HABR.COM:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
 
         const buttonsContainer = document.createElement('div');
         buttonsContainer.style.display = 'flex';
@@ -593,7 +602,7 @@
             const textContainer = document.createElement('div');
             textContainer.style.flex = '1';
             textContainer.style.marginRight = '20px';
-            textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ KOD.RU:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
+            textContainer.innerHTML = `<strong style="font-weight: 600;">📰 НОВОСТЬ HABR.COM:</strong><br><a href="${link}" target="_blank" style="color: #ffe6e6; text-decoration: none; font-weight: 500;">${title}</a>`;
 
             const buttonsContainer = document.createElement('div');
             buttonsContainer.style.display = 'flex';
